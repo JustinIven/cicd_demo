@@ -2,13 +2,12 @@
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 # More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
 
-name: Build and deploy Python app to Azure Web App - cicdDemo-01-app
+name: Deployment
 
 on:
   push:
     branches:
       - main
-  workflow_dispatch:
 
 
 jobs:
@@ -20,7 +19,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python version
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -60,9 +59,9 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_B710AC5428FE41FCB5606E5EE08AA275 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F2F6FC5824E248919A7828AA6DB60EE8 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_CBAD19987976429B891173FFD23D6972 }}
+          client-id: ${{ vars.AZURE_CLIENTID }}
+          tenant-id: ${{ vars.AZURE_TENANTID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTIONID }}
 
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
@@ -76,7 +75,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         id: deploy-to-stage
         with:
-          app-name: ${{ vars.WEBAPP_NAME }}
+          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
           slot-name: 'staging'
 
 
@@ -86,7 +85,7 @@ jobs:
     needs: deploy-to-stage
     environment:
       name: 'Production'
-      url: ${{ steps.get-default-domain.webapp-url }}
+      url: ${{ steps.get-default-domain.outputs.webapp-url }}
     permissions:
       id-token: write #This is required for requesting the JWT
 
@@ -94,17 +93,16 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_B710AC5428FE41FCB5606E5EE08AA275 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_F2F6FC5824E248919A7828AA6DB60EE8 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_CBAD19987976429B891173FFD23D6972 }}
+          client-id: ${{ vars.AZURE_CLIENTID }}
+          tenant-id: ${{ vars.AZURE_TENANTID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTIONID }}
 
       - name: Swap slots
-        run: az webapp deployment slot swap --slot staging --name ${{ vars.WEBAPP_NAME }} --resource-group ${{ vars.RESOURCE_GROUP }}
+        run: az webapp deployment slot swap --slot staging --name ${{ vars.AZURE_WEBAPP_NAME }} --resource-group ${{ vars.AZURE_RESOURCE_GROUP }}
 
       - name: Get default doamin
         id: get-default-domain
         run: |
-          defaultHostName=$(az webapp show --name ${{ vars.WEBAPP_NAME }} --resource-group ${{ vars.RESOURCE_GROUP }} --query defaultHostName -o tsv)
+          defaultHostName=$(az webapp show --name ${{ vars.AZURE_WEBAPP_NAME }} --resource-group ${{ vars.AZURE_RESOURCE_GROUP }} --query defaultHostName -o tsv)
           echo "webapp-url=https://${defaultHostName}" >> "$GITHUB_OUTPUT"
-        
-        
+ 
