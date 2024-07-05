@@ -81,11 +81,12 @@ jobs:
 
 
   release-to-prod:
+    name: Deploy to production
     runs-on: ubuntu-latest
     needs: deploy-to-stage
     environment:
       name: 'Production'
-      url: 'cicddemo-01-app-hyfxfec5ajarefaf.switzerlandnorth-01.azurewebsites.net'
+      url: ${{ steps.get-default-domain.webapp-url }}
     permissions:
       id-token: write #This is required for requesting the JWT
 
@@ -102,4 +103,8 @@ jobs:
 
       - name: Get default doamin
         id: get-default-domain
-        run: az webapp show --name ${{ vars.WEBAPP_NAME }} --resource-group ${{ vars.RESOURCE_GROUP }} --query defaultHostName
+        run: |
+          defaultHostName=$(az webapp show --name ${{ vars.WEBAPP_NAME }} --resource-group ${{ vars.RESOURCE_GROUP }} --query defaultHostName -o tsv)
+          echo "webapp-url=https://${defaultHostName}" >> "$GITHUB_OUTPUT"
+        
+        
